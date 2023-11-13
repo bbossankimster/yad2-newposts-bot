@@ -72,6 +72,7 @@ class Yad2SearchNewPosts(Yad2Search):
             self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
         self.days = days
         self.save_result = save_result
+        self.new_tagged_posts = []
 
     def start(self):
         self._load_new_posts()
