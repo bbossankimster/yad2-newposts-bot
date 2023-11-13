@@ -68,6 +68,8 @@ class Yad2SearchNewPosts(Yad2Search):
             self.stored_posts = pd.read_csv(STORED_POSTS_CSV, index_col=False)
         except FileNotFoundError:
             self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
+        else:
+            self.stored_posts['date_added'] = pd.to_datetime(self.stored_posts['date_added'])
         if list(self.stored_posts.columns) != POST_DF_COLUMNS:
             self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
         self.days = days
@@ -100,18 +102,25 @@ class Yad2SearchNewPosts(Yad2Search):
         posts = pd.DataFrame(list(self._iter_filtered_posts()), columns=POST_DF_COLUMNS)
         if self.days and self.days > 0:
             posts = self.get_last_n_day_posts(posts, self.days, 'date')
+            posts['date_added'] = pd.to_datetime(posts['date_added'])
         print('\nAFTER filtering:', posts, sep='\n\n')
         if not self.stored_posts.empty:
-            self.new_posts = pd.concat([self.stored_posts, posts]).drop_duplicates(subset=ID_COLUMN, keep=False)
+            # There are saved posts
+            latest_date = self.stored_posts['date_added'].max()
+            after_latest_date = posts[posts['date_added'] > latest_date]
+            self.new_posts = after_latest_date
             self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
         else:
+            # No saved posts, from zero
             self.stored_posts = posts
             self.new_posts = posts
+        self.stored_posts = self.stored_posts.sort_values(by='date_added')
         if self.save_result:
             self.stored_posts.to_csv(STORED_POSTS_CSV, index=False)
             self.new_posts.to_csv(NEW_POSTS_CSV, index=False)
         if not self.new_posts.empty:
             self.new_posts['price_numeric'] = self.new_posts['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(float)
+            
             self.new_posts = self.new_posts.sort_values(by='price_numeric', ascending=False)
             print('\nBEFORE filtering:', posts, sep='\n\n')
             print('\nNEW posts:', self.new_posts, sep='\n\n')
@@ -119,8 +128,6 @@ class Yad2SearchNewPosts(Yad2Search):
 
     def _split_newposts_by_tag(self):
         self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
-
-        
 
     @staticmethod
     def get_last_n_day_posts(df, days, date_column):
