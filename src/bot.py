@@ -65,7 +65,7 @@ def start_search(update, context):
     y2_srch.start()
     for msg_chunk in iter_msg_chunks_by_tag(y2_srch):
         update.message.reply_text(msg_chunk, disable_web_page_preview=True)
-    if not y2_srch.new_posts:
+    if not y2_srch.new_tagged_posts:
         update.message.reply_text(NOT_FOUND_TEXT, disable_web_page_preview=True)
 
 
@@ -97,7 +97,7 @@ def callback_search_loop(context):
     y2_srch.start()
     for msg_chunk in iter_msg_chunks_by_tag(y2_srch):
         context.bot.send_message(chat_id=YAD2_POSTS_CHAT, text=msg_chunk, disable_web_page_preview=True)
-    if not y2_srch.new_posts:
+    if not y2_srch.new_tagged_posts:
         context.bot.send_message(chat_id=ADMIN, text=NOT_FOUND_TEXT, disable_web_page_preview=True)
 
 @restricted
