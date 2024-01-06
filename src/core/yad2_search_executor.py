@@ -131,7 +131,7 @@ class Yad2SearchNewPosts(Yad2Search):
         decreased_price_df['price_df1'] = decreased_price_df.apply(lambda x: '{} (было {})'.format(x['price_df1'], x['price_df2']), axis=1)
         columns_df1 = [col for col in decreased_price_df.columns if '_df1' in col]
         decreased_price_df = decreased_price_df[columns_df1]
-        decreased_price_df.columns = [col.split('_')[0] for col in decreased_price_df.columns]
+        decreased_price_df.columns = [col.replace('_df1', '') for col in decreased_price_df.columns]
         self.decreased_price_posts = []
         if not decreased_price_df.empty:
             self.decreased_price_posts = [(tag, grouped_df) for tag, grouped_df in decreased_price_df.groupby('tag')]
