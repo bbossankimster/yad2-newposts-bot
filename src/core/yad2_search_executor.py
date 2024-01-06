@@ -8,15 +8,12 @@ from settings import PROXY_OPT
 PROXIES = {
     'http': PROXY_OPT, 'https': PROXY_OPT
     }
-
-ID_COLUMN = 'id'
-
+# ID column can be changed
 POST_COLUMNS = [
-    ID_COLUMN, "title_1", "price", "Rooms",
+    'id', "title_1", "price", "Rooms",
     "city", "date_added", "date", "contact_name"
     ]
 POST_DF_COLUMNS = POST_COLUMNS + ['url', 'tag']
-
 STORED_POSTS_CSV = 'data/stored_posts.csv'
 NEW_POSTS_CSV = 'data/new_posts.csv'
 URLS_FILE = 'data/urls.txt'
@@ -31,17 +28,22 @@ class Yad2Search:
     def _iter_posts(self):
         cntr = 0
         for url, tag in self.urls:
-            print("\n***** TAG/URL...", tag, url)
-            cntr += 1
-            try:
-                resp = requests.get(url, proxies=PROXIES)
-                assert resp.status_code == 200
-            except Exception as e:
-                print("Exception...", e)
-                self.errors.append(tag)
-            else:
-                for post in resp.json()["feed"]["feed_items"]:
-                    yield url, tag, post
+            page = 1
+            pages = 1
+            while page <= pages:
+                print("\n***** TAG {}, URL {} (page #{} from {})".format(tag, url, page, pages))
+                cntr += 1
+                try:
+                    resp = requests.get(url+'&page={}'.format(page), proxies=PROXIES)
+                    assert resp.status_code == 200
+                except Exception as e:
+                    print("Exception...", e)
+                    self.errors.append(tag)
+                else:
+                    page += 1
+                    pages = resp.json()["feed"]["total_pages"]
+                    for post in resp.json()["feed"]["feed_items"]:
+                        yield url, tag, post
 
     def _iter_filtered_posts(self):
         cntr = 0
@@ -52,11 +54,13 @@ class Yad2Search:
             except KeyError:
                 pass
             else:
+                #
                 if not post["merchant"] and self.ignore_merchant:
                     yield post_data + [url, tag]
+                    # print("no_merchant (ignore_merchant=True)", tag, post['id'])
                 elif not post["merchant"]:
+                    # print("no_merchant (ignore_merchant=False)", tag, post['id'])
                     yield post_data + [url, tag]
-                print(tag, post['id'])
 
 
 class Yad2SearchNewPosts(Yad2Search):
@@ -67,18 +71,22 @@ class Yad2SearchNewPosts(Yad2Search):
         try:
             self.stored_posts = pd.read_csv(STORED_POSTS_CSV, index_col=False)
         except FileNotFoundError:
+            print('Can not open {}'.format(STORED_POSTS_CSV))
             self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
-        else:
-            self.stored_posts['date_added'] = pd.to_datetime(self.stored_posts['date_added'])
         if list(self.stored_posts.columns) != POST_DF_COLUMNS:
+            print('Incorrect columns found!')
+            print('from file:', list(self.stored_posts.columns))
+            print('from vars:', POST_DF_COLUMNS)
             self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
         self.days = days
         self.save_result = save_result
         self.new_tagged_posts = []
+        self.new_posts_count = 0
 
     def start(self):
         self._load_new_posts()
-        self._split_newposts_by_tag()
+        if self.new_posts_count:
+            self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
 
     def _read_urls(self):
         try:
@@ -99,44 +107,49 @@ class Yad2SearchNewPosts(Yad2Search):
             self.urls = []
 
     def _load_new_posts(self):
-        posts = pd.DataFrame(list(self._iter_filtered_posts()), columns=POST_DF_COLUMNS)
-        if self.days and self.days > 0:
-            posts = self.get_last_n_day_posts(posts, self.days, 'date')
-            posts['date_added'] = pd.to_datetime(posts['date_added'])
-        print('\nAFTER filtering:', posts, sep='\n\n')
-        if not self.stored_posts.empty:
-            # There are saved posts
-            latest_date = self.stored_posts['date_added'].max()
-            after_latest_date = posts[posts['date_added'] > latest_date]
-            self.new_posts = after_latest_date
-            self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
+        print('Parsing yad2 started!')
+        posts_raw = list(self._iter_filtered_posts())
+        posts = pd.DataFrame(posts_raw, columns=POST_DF_COLUMNS)
+        print('Parsed yad2. Found {} posts!'.format(len(posts.index)))
+        DATE_COL = 'date_added'
+        posts = self.get_last_n_day_posts(posts, self.days, DATE_COL)
+        print('Detected {} for last {} days'.format(len(posts.index), self.days))
+        print('Stored posts count:', len(self.stored_posts))
+        self.stored_posts[DATE_COL] = pd.to_datetime(self.stored_posts[DATE_COL])
+        latest_stored_date = self.stored_posts[DATE_COL].max()
+        self.new_posts = posts[posts[DATE_COL] > latest_stored_date]
+        print('New posts DATFRAME:', self.new_posts, sep='\n\n')
+        self.new_posts_count = len(self.new_posts.index)
+        if self.new_posts_count:
+            print('Found {} new posts!'.format(self.new_posts_count))
         else:
-            # No saved posts, from zero
-            self.stored_posts = posts
-            self.new_posts = posts
-        self.stored_posts = self.stored_posts.sort_values(by='date_added')
+            print('New posts not found!')
+        self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
+        self.stored_posts = self.stored_posts.sort_values(by=DATE_COL)
         if self.save_result:
             self.stored_posts.to_csv(STORED_POSTS_CSV, index=False)
             self.new_posts.to_csv(NEW_POSTS_CSV, index=False)
-        if not self.new_posts.empty:
+        if self.new_posts_count:
             self.new_posts['price_numeric'] = self.new_posts['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(float)
-            
             self.new_posts = self.new_posts.sort_values(by='price_numeric', ascending=False)
             print('\nBEFORE filtering:', posts, sep='\n\n')
             print('\nNEW posts:', self.new_posts, sep='\n\n')
-            self.new_posts_count = len(self.new_posts.index)
 
     def _split_newposts_by_tag(self):
         self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
 
     @staticmethod
     def get_last_n_day_posts(df, days, date_column):
+        print(df.head())
+        print(df['date_added'])
+        print(df['date'])
         df[date_column] = pd.to_datetime(df[date_column])
+        print(df['id'].to_list())
+        print(df['date_added'])
+        print(df['date'])
         date_in_past = datetime.now().date() - timedelta(days=days)
+        print('date_in_past, delta:', date_in_past, days)
         df_last_n_days = df[df[date_column].dt.date >= date_in_past]
+        print(df_last_n_days['id'].to_list())
+        df_last_n_days.to_csv('data/last_n_days.csv')
         return df_last_n_days
-
-
-if __name__ == "__main__":
-    y2_srch = Yad2SearchNewPosts(ignore_merchant=True, days=17)
-    y2_srch._load_new_posts()
