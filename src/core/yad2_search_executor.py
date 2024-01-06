@@ -128,6 +128,7 @@ class Yad2SearchNewPosts(Yad2Search):
         print('Обьединенная таблица с обьявлениями из yad2 и сохраненными:')
         print(merged_df[['hash', 'id_df1', 'price_df1', 'id_df2','price_df2']])
         decreased_price_df = merged_df[merged_df['price_df1'] < merged_df['price_df2']]
+        decreased_price_df = decreased_price_df.sort_values(by='price_df1', ascending=False)
         decreased_price_df['price_df1'] = decreased_price_df.apply(lambda x: '{} (было {})'.format(x['price_df1'], x['price_df2']), axis=1)
         columns_df1 = [col for col in decreased_price_df.columns if '_df1' in col]
         decreased_price_df = decreased_price_df[columns_df1]
