@@ -20,7 +20,7 @@ def make_chunked_msgs(posts):
     return msg_portions
 
 
-def iter_msg_chunks_by_tag(y2_srch, tagged_posts, tags):
+def iter_msg_chunks_by_tag(tagged_posts, tags):
     txt_portions = make_chunked_msgs(tagged_posts)
     cntr = 0
     for tag in tags:
