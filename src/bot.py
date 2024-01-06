@@ -44,6 +44,7 @@ def main():
     dp.bot_data['urls'] = read_urls(URLS_FILE)
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("start_search", start_search))
+    dp.add_handler(CommandHandler("gry_changed_price", get_changed_price_posts))
     dp.add_handler(CommandHandler("start_search_loop", start_search_loop))
     dp.add_handler(CommandHandler("delete_search_loop", delete_search_loop))
     dp.add_handler(CommandHandler("add_urls", add_urls))
