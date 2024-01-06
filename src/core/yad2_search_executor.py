@@ -3,6 +3,7 @@ import utils.url_mods as urlmod
 import pandas as pd
 from datetime import datetime, timedelta
 from settings import PROXY_OPT
+import hashlib
 
 
 PROXIES = {
@@ -73,6 +74,7 @@ class Yad2SearchNewPosts(Yad2Search):
         except FileNotFoundError:
             print('Can not open {}'.format(STORED_POSTS_CSV))
             self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
+        self.stored_posts['price'] = self.stored_posts['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(int)
         if list(self.stored_posts.columns) != POST_DF_COLUMNS:
             print('Incorrect columns found!')
             print('from file:', list(self.stored_posts.columns))
@@ -84,7 +86,13 @@ class Yad2SearchNewPosts(Yad2Search):
         self.new_posts_count = 0
 
     def start(self):
-        self._load_new_posts()
+        print('Parsing yad2 started!')
+        posts_raw = list(self._iter_filtered_posts())
+        posts_df = pd.DataFrame(posts_raw, columns=POST_DF_COLUMNS)
+        posts_df['price'] = posts_df['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(int)
+        print('Parsed yad2. Found {} posts!'.format(len(posts_df.index)))
+        self._get_new_posts(posts_df)
+        # self._get_changed_price_only(posts_df)
         if self.new_posts_count:
             self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
 
@@ -106,13 +114,31 @@ class Yad2SearchNewPosts(Yad2Search):
         except FileNotFoundError:
             self.urls = []
 
-    def _load_new_posts(self):
-        print('Parsing yad2 started!')
-        posts_raw = list(self._iter_filtered_posts())
-        posts = pd.DataFrame(posts_raw, columns=POST_DF_COLUMNS)
-        print('Parsed yad2. Found {} posts!'.format(len(posts.index)))
+    def _get_changed_price_only(self, posts=None):
+        print('Trying to find posts with changed price!')
+        if posts is None:
+            raw_data = list(self._iter_filtered_posts())
+            posts = pd.DataFrame(raw_data, columns=POST_DF_COLUMNS)
+            posts['price'] = posts['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(int)
+        posts['hash'] = posts.apply(lambda x: hashlib.md5((x['tag'] + x['city'] + x['title_1'] + x['contact_name']).encode()).hexdigest(), axis=1)
+        print(posts['hash'])
+        self.stored_posts['hash'] = self.stored_posts.apply(lambda x: hashlib.md5((x['tag'] + x['city'] + x['title_1'] + x['contact_name']).encode()).hexdigest(), axis=1)
+        print(self.stored_posts['hash'])
+        merged_df = pd.merge(posts, self.stored_posts, on='hash', suffixes=('_df1', '_df2'))
+        print('Обьединенная таблица с обьявлениями из yad2 и сохраненными:')
+        print(merged_df[['hash', 'id_df1', 'price_df1', 'id_df2','price_df2']])
+        decreased_price_df = merged_df[merged_df['price_df1'] < merged_df['price_df2']]
+        decreased_price_df['price_df1'] = decreased_price_df.apply(lambda x: '{} (было {})'.format(x['price_df1'], x['price_df2']), axis=1)
+        columns_df1 = [col for col in decreased_price_df.columns if '_df1' in col]
+        decreased_price_df = decreased_price_df[columns_df1]
+        decreased_price_df.columns = [col.split('_')[0] for col in decreased_price_df.columns]
+        self.decreased_price_posts = []
+        if not decreased_price_df.empty:
+            self.decreased_price_posts = [(tag, grouped_df) for tag, grouped_df in decreased_price_df.groupby('tag')]
+
+    def _get_new_posts(self, posts_df):
         DATE_COL = 'date_added'
-        posts = self.get_last_n_day_posts(posts, self.days, DATE_COL)
+        posts = self.get_last_n_day_posts(posts_df, self.days, DATE_COL)
         print('Detected {} for last {} days'.format(len(posts.index), self.days))
         print('Stored posts count:', len(self.stored_posts))
         self.stored_posts[DATE_COL] = pd.to_datetime(self.stored_posts[DATE_COL])
@@ -130,8 +156,8 @@ class Yad2SearchNewPosts(Yad2Search):
             self.stored_posts.to_csv(STORED_POSTS_CSV, index=False)
             self.new_posts.to_csv(NEW_POSTS_CSV, index=False)
         if self.new_posts_count:
-            self.new_posts['price_numeric'] = self.new_posts['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(float)
-            self.new_posts = self.new_posts.sort_values(by='price_numeric', ascending=False)
+            # self.new_posts['price_numeric'] = self.new_posts['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(float)
+            self.new_posts = self.new_posts.sort_values(by='price', ascending=False)
             print('\nBEFORE filtering:', posts, sep='\n\n')
             print('\nNEW posts:', self.new_posts, sep='\n\n')
 
