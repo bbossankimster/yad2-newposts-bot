@@ -148,7 +148,7 @@ class Yad2SearchNewPosts(Yad2Search):
         columns_df1 = [col for col in decreased_price_df.columns if '_df1' in col]
         decreased_normal_df = decreased_price_df[columns_df1]
         print(decreased_normal_df)
-        decreased_normal_df.columns = [col.replace('df1', '') for col in decreased_normal_df.columns]
+        decreased_normal_df.columns = [col.replace('_df1', '') for col in decreased_normal_df.columns]
         print(decreased_normal_df[['id', 'price', 'date_added']])
         # decreased_normal_df[DATE_COL] = pd.to_datetime(decreased_normal_df[DATE_COL])
         return decreased_normal_df
