@@ -142,7 +142,7 @@ class Yad2SearchNewPosts(Yad2Search):
         print('Trying to find posts with changed price!')
         merged_df = pd.merge(posts, self.stored_posts, on='hash', suffixes=('_df1', '_df2'))
         print('Обьединенная таблица с обьявлениями из yad2 и сохраненными:')
-        print(merged_df[['hash', 'id_df1', 'price_df1', 'id_df2','price_df2']])
+        print(merged_df[['id_df1', 'price_df1', 'id_df2','price_df2']])
         return None
 
     def _save_posts(self):
