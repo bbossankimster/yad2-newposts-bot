@@ -95,15 +95,15 @@ class Yad2SearchNewPosts(Yad2Search):
     def start(self):
         posts_df = self._start_posts_parsing()
         new_posts = self._get_new_posts(posts_df)
-        # decreased_price_df = self._get_changed_price_only(posts_df)
+        decreased_price_df = self._get_changed_price_only(posts_df, days=30)
         if not new_posts.empty:
             print(self.stored_posts.index[0:5])
             print(new_posts.index[0:5])
             self.stored_posts = pd.concat([self.stored_posts, new_posts])
             self.stored_posts = self.stored_posts.sort_values(by='date_added', ascending=True)
-        # posts_for_advertising = pd.concat([new_posts, decreased_price_df])
+        posts_for_advertising = pd.concat([new_posts, decreased_price_df])
         # to disable get_changed_price_only
-        posts_for_advertising = new_posts
+        # posts_for_advertising = new_posts
         posts_for_advertising = posts_for_advertising.sort_values(by='price', ascending=True)
         self.advertised_tagged_posts = []
         if not posts_for_advertising.empty:
@@ -132,7 +132,7 @@ class Yad2SearchNewPosts(Yad2Search):
             print(new_records[['id', 'date_added','price', 'changed_price_txt']])
         return new_records
 
-    def _get_changed_price_only(self, posts_df):
+    def _get_changed_price_only(self, posts_df, days):
         print('Trying to find posts with changed price!')
         merged_df = pd.merge(posts_df, self.stored_posts, on='hash', suffixes=('_df1', '_df2'))
         print('Обьявления из поиска, которые есть в сохраненных ({} записей):'.format(len(merged_df)))
@@ -140,7 +140,7 @@ class Yad2SearchNewPosts(Yad2Search):
         decreased_price_df = merged_df[merged_df['price_df1'] < merged_df['price_df2']]
         if not decreased_price_df.empty:
             decreased_price_df['date_added_df1'] = pd.to_datetime(decreased_price_df['date_added_df1'])
-            date_in_past = datetime.now().date() - timedelta(days=60)
+            date_in_past = datetime.now().date() - timedelta(days=days)
             decreased_price_df = decreased_price_df[decreased_price_df['date_added_df1'].dt.date >= date_in_past]
             print('Найдено {} обьявлений с уменьшенной ценой!'.format(len(decreased_price_df)))
             print(decreased_price_df[['id_df1', 'price_df1', 'date_added_df1', 'id_df2','price_df2']])
