@@ -97,6 +97,8 @@ class Yad2SearchNewPosts(Yad2Search):
         new_posts = self._get_new_posts(posts_df)
         decreased_price_df = self._get_changed_price_only(posts_df)
         if not new_posts.empty:
+            print(self.stored_posts.index[0:5])
+            print(new_posts.index[0:5])
             self.stored_posts = pd.concat([self.stored_posts, new_posts])
             self.stored_posts = self.stored_posts.sort_values(by='date_added', ascending=True)
         posts_for_advertising = pd.concat([new_posts, decreased_price_df])
@@ -107,7 +109,7 @@ class Yad2SearchNewPosts(Yad2Search):
         if not posts_for_advertising.empty:
             print('{} обьявлений найдено для отправки уведомления!'.format(len(posts_for_advertising)))
             self.advertised_tagged_posts = [(tag, grouped_df) for tag, grouped_df in posts_for_advertising.groupby('tag')]
-        self._save_posts()
+            self._save_posts()
 
     def _start_posts_parsing(self):
         print('Parsing yad2 started!')
