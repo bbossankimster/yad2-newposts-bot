@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from settings import PROXY_OPT
 import hashlib
+import shutil
 
 
 PROXIES = {
@@ -105,6 +106,7 @@ class Yad2SearchNewPosts(Yad2Search):
         if not posts_for_advertising.empty:
             print('{} обьявлений найдено для отправки уведомления!'.format(len(posts_for_advertising)))
             self.advertised_tagged_posts = [(tag, grouped_df) for tag, grouped_df in posts_for_advertising.groupby('tag')]
+        self._save_posts()
 
     def _start_posts_parsing(self):
         print('Parsing yad2 started!')
@@ -150,9 +152,8 @@ class Yad2SearchNewPosts(Yad2Search):
         return decreased_normal_df
 
     def _save_posts(self):
+        shutil.copyfile(STORED_POSTS_CSV, STORED_POSTS_CSV + '.bak')
         self.stored_posts.to_csv(STORED_POSTS_CSV, index=False)
-        self.new_posts = self.new_posts.sort_values(by='price', ascending=False)
-        self.new_posts.to_csv(NEW_POSTS_CSV, index=False)
 
     def _split_newposts_by_tag(self):
         self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
