@@ -102,7 +102,7 @@ class Yad2SearchNewPosts(Yad2Search):
         posts_for_advertising = posts_for_advertising.sort_values(by='price', ascending=True)
         self.advertised_tagged_posts = []
         if not posts_for_advertising.empty:
-            self.advertised_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
+            self.advertised_tagged_posts = [(tag, grouped_df) for tag, grouped_df in posts_for_advertising.groupby('tag')]
 
     def _start_posts_parsing(self):
         print('Parsing yad2 started!')
