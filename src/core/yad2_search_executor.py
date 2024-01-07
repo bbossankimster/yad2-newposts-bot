@@ -95,7 +95,7 @@ class Yad2SearchNewPosts(Yad2Search):
     def start(self):
         posts_df = self._start_posts_parsing()
         new_posts = self._get_new_posts(posts_df)
-        decreased_price_df = self._get_changed_price_only(posts_df, days=30)
+        decreased_price_df = self._get_changed_price_only(posts_df, days=60)
         if not new_posts.empty:
             print(self.stored_posts.index[0:5])
             print(new_posts.index[0:5])
