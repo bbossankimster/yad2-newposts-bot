@@ -95,10 +95,10 @@ class Yad2SearchNewPosts(Yad2Search):
         new_posts = self._get_new_posts(posts_df)
         decreased_price_df = self._get_changed_price_only(posts_df)
         if not new_posts.empty:
-            self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
+            self.stored_posts = pd.concat([self.stored_posts, new_posts])
             self.stored_posts = self.stored_posts.sort_values(by='date_added', ascending=True)
         posts_for_advertising = pd.concat([new_posts, decreased_price_df])
-        posts_for_advertising = posts_for_advertising.sort_values(by='price')
+        posts_for_advertising = posts_for_advertising.sort_values(by='price', ascending=True)
         self.advertised_tagged_posts = []
         if not posts_for_advertising.empty:
             self.advertised_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
