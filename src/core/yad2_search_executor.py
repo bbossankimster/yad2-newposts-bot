@@ -142,6 +142,7 @@ class Yad2SearchNewPosts(Yad2Search):
                 row['changed_price_txt_df1'] = '{} (было {})'.format(row['price_df1'], row['price_df2'])
         columns_df1 = [col for col in decreased_price_df.columns if '_df1' in col]
         decreased_normal_df = decreased_price_df[columns_df1]
+        decreased_normal_df[DATE_COL] = pd.to_datetime(decreased_normal_df[DATE_COL])
         return decreased_normal_df
 
     def _save_posts(self):
