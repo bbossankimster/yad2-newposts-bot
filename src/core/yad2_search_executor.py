@@ -76,6 +76,7 @@ class Yad2SearchNewPosts(Yad2Search):
             print('Can not open {}'.format(STORED_POSTS_CSV))
             self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
         print('Stored posts count:', len(self.stored_posts))
+        self.stored_posts[DATE_COL] = pd.to_datetime(self.stored_posts[DATE_COL])
         last_row = self.stored_posts.iloc[[-1]]
         date_added = last_row['date_added'].values
         hash_value = last_row.index[0]
