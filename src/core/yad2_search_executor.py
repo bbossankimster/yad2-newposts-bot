@@ -71,6 +71,11 @@ class Yad2SearchNewPosts(Yad2Search):
             super().__init__(self.urls, ignore_merchant)
         try:
             self.stored_posts = pd.read_csv(STORED_POSTS_CSV, index_col='hash')
+            print('Stored posts count:', len(self.stored_posts))
+            last_row = self.stored_posts.iloc[[-1]]
+            date_added = last_row['date_added'].values
+            hash_value = last_row.index[0]
+            print('Last post date/hash is {}/{}'.format(date_added, hash_value))
         except FileNotFoundError:
             print('Can not open {}'.format(STORED_POSTS_CSV))
             self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
@@ -147,8 +152,8 @@ class Yad2SearchNewPosts(Yad2Search):
         DATE_COL = 'date_added'
         posts = posts_df
         # posts = self.get_last_n_day_posts(posts_df, self.days, DATE_COL)
-        print('Detected {} for last {} days'.format(len(posts.index), self.days))
-        print('Stored posts count:', len(self.stored_posts))
+        # print('Detected {} for last {} days'.format(len(posts.index), self.days))
+        # 
         self.stored_posts[DATE_COL] = pd.to_datetime(self.stored_posts[DATE_COL])
         latest_stored_date = self.stored_posts[DATE_COL].max()
         self.new_posts = posts[posts[DATE_COL] > latest_stored_date]
