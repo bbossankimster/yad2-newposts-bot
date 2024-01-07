@@ -12,9 +12,9 @@ def make_chunked_msgs(posts):
         cntr = 0
         for indx, post in grouped_post.iterrows():
             cntr += 1
-            print(post['price'])
-            print(type(post['price']))
-            price = post['price'] if post['price'] else post['changed_price_txt']
+            print(post['changed_price_txt'])
+            print(type(post['changed_price_txt']))
+            price = post['changed_price_txt'] if post['changed_price_txt'] else post['price']
             txt = "{0} {1}\n{2} {3} {4} ({5})".format(
                 "{}".format(cntr), YAD2_POST_URL.format(post['id']),
                 post['city'], price, post['title_1'], post['date_added'], tag)
