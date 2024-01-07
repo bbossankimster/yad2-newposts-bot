@@ -74,7 +74,6 @@ class Yad2SearchNewPosts(Yad2Search):
         except FileNotFoundError:
             print('Can not open {}'.format(STORED_POSTS_CSV))
             self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
-        self.stored_posts['price'] = self.stored_posts['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(int)
         if list(self.stored_posts.columns) != POST_DF_COLUMNS:
             print('Incorrect columns found!')
             print('from file:', list(self.stored_posts.columns))
