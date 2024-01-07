@@ -14,7 +14,7 @@ POST_COLUMNS = [
     'id', "title_1", "price", "Rooms",
     "city", "date_added", "date", "contact_name"
     ]
-POST_DF_COLUMNS = POST_COLUMNS + ['url', 'tag']
+POST_DF_COLUMNS = POST_COLUMNS + ['url', 'tag', 'changed_price_txt']
 STORED_POSTS_CSV = 'data/stored_posts.csv'
 NEW_POSTS_CSV = 'data/new_posts.csv'
 URLS_FILE = 'data/urls.txt'
@@ -57,11 +57,11 @@ class Yad2Search:
             else:
                 #
                 if not post["merchant"] and self.ignore_merchant:
-                    yield post_data + [url, tag]
+                    yield post_data + [url, tag, '']
                     # print("no_merchant (ignore_merchant=True)", tag, post['id'])
                 elif not post["merchant"]:
                     # print("no_merchant (ignore_merchant=False)", tag, post['id'])
-                    yield post_data + [url, tag]
+                    yield post_data + [url, tag, '']
 
 
 class Yad2SearchNewPosts(Yad2Search):
@@ -70,15 +70,15 @@ class Yad2SearchNewPosts(Yad2Search):
         if not test_mode:
             super().__init__(self.urls, ignore_merchant)
         try:
-            self.stored_posts = pd.read_csv(STORED_POSTS_CSV, index_col=False)
+            self.stored_posts = pd.read_csv(STORED_POSTS_CSV, index_col='hash')
         except FileNotFoundError:
             print('Can not open {}'.format(STORED_POSTS_CSV))
             self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
         if list(self.stored_posts.columns) != POST_DF_COLUMNS:
-            print('Incorrect columns found!')
             print('from file:', list(self.stored_posts.columns))
             print('from vars:', POST_DF_COLUMNS)
-            self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
+            err = 'Incorrect columns in {} found!'.format(STORED_POSTS_CSV)
+            raise ValueError(err)
         self.days = days
         self.save_result = save_result
         self.new_tagged_posts = []
@@ -88,9 +88,11 @@ class Yad2SearchNewPosts(Yad2Search):
         print('Parsing yad2 started!')
         posts_raw = list(self._iter_filtered_posts())
         posts_df = pd.DataFrame(posts_raw, columns=POST_DF_COLUMNS)
+        posts_df['hash'] = posts_df.apply(lambda x: hashlib.md5((x['tag'] + x['city'] + x['title_1'] + x['contact_name']).encode()).hexdigest(), axis=1)
         posts_df['price'] = posts_df['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(int)
+        posts_df = posts_df.set_index('hash')
         print('Parsed yad2. Found {} posts!'.format(len(posts_df.index)))
-        self._get_new_posts(posts_df)
+        # self._get_new_posts(posts_df)
         # self._get_changed_price_only(posts_df)
         if self.new_posts_count:
             self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
