@@ -93,9 +93,10 @@ class Yad2SearchNewPosts(Yad2Search):
     def start(self):
         posts_df = self._start_posts_parsing()
         new_posts = self._get_new_posts(posts_df)
-        changed_price_posts = self._get_changed_price_only(posts_df)
-        #self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
-        #self.stored_posts = self.stored_posts.sort_values(by=DATE_COL)
+        decreased_price_df = self._get_changed_price_only(posts_df)
+        if not new_posts.empty:
+            self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
+            self.stored_posts = self.stored_posts.sort_values(by='date_added', ascending=True)
         if self.new_posts_count:
             self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
 
@@ -149,7 +150,14 @@ class Yad2SearchNewPosts(Yad2Search):
             date_in_past = datetime.now().date() - timedelta(days=60)
             decreased_price_df = decreased_price_df[decreased_price_df['date_added_df1'].dt.date >= date_in_past]
             print('Найдено {} обьявлений с уменьшенной ценой!'.format(len(decreased_price_df)))
-        return None
+            print(decreased_price_df[['id_df1', 'price_df1', 'date_added_df1', 'id_df2','price_df2']])
+            for index, row in decreased_price_df.iterrows():
+                self.stored_posts.loc[index, 'changed_price_txt'] = '{} (было {})'.format(row['price_df1'], row['price_df2'])
+                self.stored_posts.loc[index, 'price'] = row['price_df1']
+                row['price_df1'] = '{} (было {})'.format(row['price_df1'], row['price_df2'])
+        columns_df1 = [col for col in decreased_price_df.columns if '_df1' in col]
+        decreased_normal_df = decreased_price_df[columns_df1]
+        return decreased_normal_df
 
     def _save_posts(self):
         self.stored_posts.to_csv(STORED_POSTS_CSV, index=False)
