@@ -154,7 +154,7 @@ class Yad2SearchNewPosts(Yad2Search):
 
     def _save_posts(self):
         shutil.copyfile(STORED_POSTS_CSV, STORED_POSTS_CSV + '.bak')
-        self.stored_posts.to_csv(STORED_POSTS_CSV, index=False)
+        self.stored_posts.to_csv(STORED_POSTS_CSV, index=True)
 
     def _split_newposts_by_tag(self):
         self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
