@@ -18,6 +18,7 @@ POST_DF_COLUMNS = POST_COLUMNS + ['url', 'tag', 'changed_price_txt']
 STORED_POSTS_CSV = 'data/stored_posts.csv'
 NEW_POSTS_CSV = 'data/new_posts.csv'
 URLS_FILE = 'data/urls.txt'
+DATE_COL = 'date_added'
 
 
 class Yad2Search:
@@ -130,7 +131,6 @@ class Yad2SearchNewPosts(Yad2Search):
     def _get_new_posts(self, posts_df):
         new_records = posts_df[~posts_df.index.isin(self.stored_posts.index)]
         if not new_records.empty:
-            DATE_COL = 'date_added'
             new_records[DATE_COL] = pd.to_datetime(new_records[DATE_COL])
             date_in_past = datetime.now().date() - timedelta(days=60)
             new_records = new_records[new_records[DATE_COL].dt.date >= date_in_past]
@@ -145,6 +145,9 @@ class Yad2SearchNewPosts(Yad2Search):
         print(merged_df[['id_df1', 'price_df1', 'id_df2','price_df2']])
         decreased_price_df = merged_df[merged_df['price_df1'] < merged_df['price_df2']]
         if not decreased_price_df.empty:
+            decreased_price_df['date_added_df1'] = pd.to_datetime(decreased_price_df['date_added_df1'])
+            date_in_past = datetime.now().date() - timedelta(days=60)
+            decreased_price_df = decreased_price_df[decreased_price_df['date_added_df1'].dt.date >= date_in_past]
             print('Найдено {} обьявлений с уменьшенной ценой!'.format(len(decreased_price_df)))
         return None
 
