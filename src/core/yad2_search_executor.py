@@ -102,6 +102,7 @@ class Yad2SearchNewPosts(Yad2Search):
         posts_for_advertising = posts_for_advertising.sort_values(by='price', ascending=True)
         self.advertised_tagged_posts = []
         if not posts_for_advertising.empty:
+            print('{} обьявлений найдено для отправки уведомления!'.format(len(posts_for_advertising)))
             self.advertised_tagged_posts = [(tag, grouped_df) for tag, grouped_df in posts_for_advertising.groupby('tag')]
 
     def _start_posts_parsing(self):
@@ -137,13 +138,17 @@ class Yad2SearchNewPosts(Yad2Search):
             decreased_price_df = decreased_price_df[decreased_price_df['date_added_df1'].dt.date >= date_in_past]
             print('Найдено {} обьявлений с уменьшенной ценой!'.format(len(decreased_price_df)))
             print(decreased_price_df[['id_df1', 'price_df1', 'date_added_df1', 'id_df2','price_df2']])
+            cntr = 0
             for index, row in decreased_price_df.iterrows():
+                cntr += 1
+                print(cntr, index)
                 self.stored_posts.loc[index, 'changed_price_txt'] = '{} (было {})'.format(row['price_df1'], row['price_df2'])
                 self.stored_posts.loc[index, 'price'] = row['price_df1']
                 row['changed_price_txt_df1'] = '{} (было {})'.format(row['price_df1'], row['price_df2'])
         columns_df1 = [col for col in decreased_price_df.columns if '_df1' in col]
         decreased_normal_df = decreased_price_df[columns_df1]
         decreased_normal_df.columns = [col.replace('df1', '') for col in decreased_normal_df.columns]
+        print(decreased_normal_df[['id', 'price', 'date_added']])
         # decreased_normal_df[DATE_COL] = pd.to_datetime(decreased_normal_df[DATE_COL])
         return decreased_normal_df
 
