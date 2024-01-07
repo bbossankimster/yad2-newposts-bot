@@ -71,14 +71,14 @@ class Yad2SearchNewPosts(Yad2Search):
             super().__init__(self.urls, ignore_merchant)
         try:
             self.stored_posts = pd.read_csv(STORED_POSTS_CSV, index_col='hash')
-            print('Stored posts count:', len(self.stored_posts))
-            last_row = self.stored_posts.iloc[[-1]]
-            date_added = last_row['date_added'].values
-            hash_value = last_row.index[0]
-            print('Last post date/hash is {}/{}'.format(date_added, hash_value))
         except FileNotFoundError:
             print('Can not open {}'.format(STORED_POSTS_CSV))
             self.stored_posts = pd.DataFrame(columns=POST_DF_COLUMNS)
+        print('Stored posts count:', len(self.stored_posts))
+        last_row = self.stored_posts.iloc[[-1]]
+        date_added = last_row['date_added'].values
+        hash_value = last_row.index[0]
+        print('Last post date/hash is {}/{}'.format(date_added, hash_value))
         if list(self.stored_posts.columns) != POST_DF_COLUMNS:
             print('from file:', list(self.stored_posts.columns))
             print('from vars:', POST_DF_COLUMNS)
@@ -91,7 +91,7 @@ class Yad2SearchNewPosts(Yad2Search):
 
     def start(self):
         posts_df = self._start_posts_parsing()
-        # self._get_new_posts(posts_df)
+        self._get_new_posts(posts_df)
         # self._get_changed_price_only(posts_df)
         if self.new_posts_count:
             self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
@@ -131,10 +131,6 @@ class Yad2SearchNewPosts(Yad2Search):
             raw_data = list(self._iter_filtered_posts())
             posts = pd.DataFrame(raw_data, columns=POST_DF_COLUMNS)
             posts['price'] = posts['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(int)
-        posts['hash'] = posts.apply(lambda x: hashlib.md5((x['tag'] + x['city'] + x['title_1'] + x['contact_name']).encode()).hexdigest(), axis=1)
-        print(posts['hash'])
-        self.stored_posts['hash'] = self.stored_posts.apply(lambda x: hashlib.md5((x['tag'] + x['city'] + x['title_1'] + x['contact_name']).encode()).hexdigest(), axis=1)
-        print(self.stored_posts['hash'])
         merged_df = pd.merge(posts, self.stored_posts, on='hash', suffixes=('_df1', '_df2'))
         print('Обьединенная таблица с обьявлениями из yad2 и сохраненными:')
         print(merged_df[['hash', 'id_df1', 'price_df1', 'id_df2','price_df2']])
@@ -149,22 +145,12 @@ class Yad2SearchNewPosts(Yad2Search):
             self.decreased_price_posts = [(tag, grouped_df) for tag, grouped_df in decreased_price_df.groupby('tag')]
 
     def _get_new_posts(self, posts_df):
-        DATE_COL = 'date_added'
-        posts = posts_df
-        # posts = self.get_last_n_day_posts(posts_df, self.days, DATE_COL)
-        # print('Detected {} for last {} days'.format(len(posts.index), self.days))
-        # 
-        self.stored_posts[DATE_COL] = pd.to_datetime(self.stored_posts[DATE_COL])
-        latest_stored_date = self.stored_posts[DATE_COL].max()
-        self.new_posts = posts[posts[DATE_COL] > latest_stored_date]
-        print('New posts DATFRAME:', self.new_posts, sep='\n\n')
-        self.new_posts_count = len(self.new_posts.index)
-        if self.new_posts_count:
-            print('Found {} new posts!'.format(self.new_posts_count))
-        else:
-            print('New posts not found!')
-        self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
-        self.stored_posts = self.stored_posts.sort_values(by=DATE_COL)
+        new_records = posts_df[~posts_df.index.isin(self.stored_posts.index)]
+        if not new_records.empty:
+            print('Found {} new posts!'.format(len(new_records)))
+            print(new_records[['id', 'date_added','price', 'changed_price_txt']])
+        # self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
+        # self.stored_posts = self.stored_posts.sort_values(by=DATE_COL)
 
     def _save_posts(self):
         self.stored_posts.to_csv(STORED_POSTS_CSV, index=False)
