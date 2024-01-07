@@ -91,21 +91,12 @@ class Yad2SearchNewPosts(Yad2Search):
 
     def start(self):
         posts_df = self._start_posts_parsing()
-        self._get_new_posts(posts_df)
-        # self._get_changed_price_only(posts_df)
+        new_posts = self._get_new_posts(posts_df)
+        changed_price_posts = self._get_changed_price_only(posts_df)
+        #self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
+        #self.stored_posts = self.stored_posts.sort_values(by=DATE_COL)
         if self.new_posts_count:
             self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
-
-    def _start_posts_parsing(self):
-        print('Parsing yad2 started!')
-        posts_raw = list(self._iter_filtered_posts())
-        posts_df = pd.DataFrame(posts_raw, columns=POST_DF_COLUMNS)
-        posts_df['hash'] = posts_df.apply(lambda x: hashlib.md5((x['tag'] + x['city'] + x['title_1'] + x['contact_name']).encode()).hexdigest(), axis=1)
-        posts_df['price'] = posts_df['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(int)
-        posts_df = posts_df.set_index('hash')
-        print([*posts_df.columns])
-        print('Parsing yad2 finished! Found {} posts!'.format(len(posts_df.index)))
-        return posts_df
 
     def _read_urls(self):
         try:
@@ -125,24 +116,16 @@ class Yad2SearchNewPosts(Yad2Search):
         except FileNotFoundError:
             self.urls = []
 
-    def _get_changed_price_only(self, posts=None):
-        print('Trying to find posts with changed price!')
-        if posts is None:
-            raw_data = list(self._iter_filtered_posts())
-            posts = pd.DataFrame(raw_data, columns=POST_DF_COLUMNS)
-            posts['price'] = posts['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(int)
-        merged_df = pd.merge(posts, self.stored_posts, on='hash', suffixes=('_df1', '_df2'))
-        print('Обьединенная таблица с обьявлениями из yad2 и сохраненными:')
-        print(merged_df[['hash', 'id_df1', 'price_df1', 'id_df2','price_df2']])
-        decreased_price_df = merged_df[merged_df['price_df1'] < merged_df['price_df2']]
-        decreased_price_df = decreased_price_df.sort_values(by='price_df1', ascending=False)
-        decreased_price_df['price_df1'] = decreased_price_df.apply(lambda x: '{} (было {})'.format(x['price_df1'], x['price_df2']), axis=1)
-        columns_df1 = [col for col in decreased_price_df.columns if '_df1' in col]
-        decreased_price_df = decreased_price_df[columns_df1]
-        decreased_price_df.columns = [col.replace('_df1', '') for col in decreased_price_df.columns]
-        self.decreased_price_posts = []
-        if not decreased_price_df.empty:
-            self.decreased_price_posts = [(tag, grouped_df) for tag, grouped_df in decreased_price_df.groupby('tag')]
+    def _start_posts_parsing(self):
+        print('Parsing yad2 started!')
+        posts_raw = list(self._iter_filtered_posts())
+        posts_df = pd.DataFrame(posts_raw, columns=POST_DF_COLUMNS)
+        posts_df['hash'] = posts_df.apply(lambda x: hashlib.md5((x['tag'] + x['city'] + x['title_1'] + x['contact_name']).encode()).hexdigest(), axis=1)
+        posts_df['price'] = posts_df['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(int)
+        posts_df = posts_df.set_index('hash')
+        print([*posts_df.columns])
+        print('Parsing yad2 finished! Found {} posts!'.format(len(posts_df.index)))
+        return posts_df
 
     def _get_new_posts(self, posts_df):
         new_records = posts_df[~posts_df.index.isin(self.stored_posts.index)]
@@ -153,8 +136,14 @@ class Yad2SearchNewPosts(Yad2Search):
             new_records = new_records[new_records[DATE_COL].dt.date >= date_in_past]
             print('Found {} new posts!'.format(len(new_records)))
             print(new_records[['id', 'date_added','price', 'changed_price_txt']])
-        # self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
-        # self.stored_posts = self.stored_posts.sort_values(by=DATE_COL)
+        return new_records
+
+    def _get_changed_price_only(self, posts=None):
+        print('Trying to find posts with changed price!')
+        merged_df = pd.merge(posts, self.stored_posts, on='hash', suffixes=('_df1', '_df2'))
+        print('Обьединенная таблица с обьявлениями из yad2 и сохраненными:')
+        print(merged_df[['hash', 'id_df1', 'price_df1', 'id_df2','price_df2']])
+        return None
 
     def _save_posts(self):
         self.stored_posts.to_csv(STORED_POSTS_CSV, index=False)
@@ -163,19 +152,3 @@ class Yad2SearchNewPosts(Yad2Search):
 
     def _split_newposts_by_tag(self):
         self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
-
-    @staticmethod
-    def get_last_n_day_posts(df, days, date_column):
-        print(df.head())
-        print(df['date_added'])
-        print(df['date'])
-        df[date_column] = pd.to_datetime(df[date_column])
-        print(df['id'].to_list())
-        print(df['date_added'])
-        print(df['date'])
-        date_in_past = datetime.now().date() - timedelta(days=days)
-        print('date_in_past, delta:', date_in_past, days)
-        df_last_n_days = df[df[date_column].dt.date >= date_in_past]
-        print(df_last_n_days['id'].to_list())
-        df_last_n_days.to_csv('data/last_n_days.csv')
-        return df_last_n_days
