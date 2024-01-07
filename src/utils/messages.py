@@ -12,12 +12,18 @@ def make_chunked_msgs(posts):
         cntr = 0
         for indx, post in grouped_post.iterrows():
             cntr += 1
-            print(post['changed_price_txt'])
-            print(type(post['changed_price_txt']))
-            price = post['changed_price_txt'] if post['changed_price_txt'] else post['price']
+            if post['changed_price_txt']:
+                price = '{} (было {})'.format(post['price'], post['changed_price_txt'])
+            else:
+                price = post['price']
             txt = "{0} {1}\n{2} {3} {4} ({5})".format(
-                "{}".format(cntr), YAD2_POST_URL.format(post['id']),
-                post['city'], price, post['title_1'], post['date_added'], tag)
+                str(cntr),
+                YAD2_POST_URL.format(post['id']),
+                post['city'],
+                price,
+                post['title_1'],
+                post['date_added']
+                )
             msg_list.append(txt)
         msg_portions[tag] = ["\n\n".join(msg_list[i:i+split_size]) for i in range(0, len(msg_list), split_size)]
     return msg_portions
