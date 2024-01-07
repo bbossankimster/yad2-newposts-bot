@@ -147,6 +147,10 @@ class Yad2SearchNewPosts(Yad2Search):
     def _get_new_posts(self, posts_df):
         new_records = posts_df[~posts_df.index.isin(self.stored_posts.index)]
         if not new_records.empty:
+            DATE_COL = 'date_added'
+            new_records[DATE_COL] = pd.to_datetime(new_records[DATE_COL])
+            date_in_past = datetime.now().date() - timedelta(days=60)
+            new_records = new_records[new_records[DATE_COL].dt.date >= date_in_past]
             print('Found {} new posts!'.format(len(new_records)))
             print(new_records[['id', 'date_added','price', 'changed_price_txt']])
         # self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
