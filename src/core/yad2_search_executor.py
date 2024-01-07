@@ -100,7 +100,7 @@ class Yad2SearchNewPosts(Yad2Search):
             self.stored_posts = pd.concat([self.stored_posts, new_posts])
             self.stored_posts = self.stored_posts.sort_values(by='date_added', ascending=True)
         posts_for_advertising = pd.concat([new_posts, decreased_price_df])
-        # to disable .get_new_posts
+        # to disable get_changed_price_only
         # posts_for_advertising = new_posts
         posts_for_advertising = posts_for_advertising.sort_values(by='price', ascending=True)
         self.advertised_tagged_posts = []
