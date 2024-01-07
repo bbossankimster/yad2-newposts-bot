@@ -98,7 +98,7 @@ class Yad2SearchNewPosts(Yad2Search):
         posts_df['hash'] = posts_df.apply(lambda x: hashlib.md5((x['tag'] + x['city'] + x['title_1'] + x['contact_name']).encode()).hexdigest(), axis=1)
         posts_df['price'] = posts_df['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(int)
         posts_df = posts_df.set_index('hash')
-        print(posts_df.columns)
+        print([*posts_df.columns])
         print('Parsing yad2 finished! Found {} posts!'.format(len(posts_df.index)))
         return posts_df
 
