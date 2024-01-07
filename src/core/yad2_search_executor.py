@@ -141,12 +141,11 @@ class Yad2SearchNewPosts(Yad2Search):
     def _get_changed_price_only(self, posts_df):
         print('Trying to find posts with changed price!')
         merged_df = pd.merge(posts_df, self.stored_posts, on='hash', suffixes=('_df1', '_df2'))
-        print('Обьединенная таблица с обьявлениями из yad2 и сохраненными:')
+        print('Обьявления из поиска, которые есть в сохраненных ({} записей):'.format(len(merged_df)))
         print(merged_df[['id_df1', 'price_df1', 'id_df2','price_df2']])
-        print('Len of merged_df:', len(merged_df))
-        existed_records = posts_df[posts_df.index.isin(self.stored_posts.index)]
-        print('{} new records matched with stored!'.format(len(existed_records)))
-
+        decreased_price_df = merged_df[merged_df['price_df1'] < merged_df['price_df2']]
+        if not decreased_price_df.empty:
+            print('Найдено {} обьявлений с уменьшенной ценой!'.format(len(decreased_price_df)))
         return None
 
     def _save_posts(self):
