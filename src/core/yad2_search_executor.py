@@ -97,26 +97,11 @@ class Yad2SearchNewPosts(Yad2Search):
         if not new_posts.empty:
             self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
             self.stored_posts = self.stored_posts.sort_values(by='date_added', ascending=True)
-        if self.new_posts_count:
-            self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
-
-    def _read_urls(self):
-        try:
-            with open(URLS_FILE, 'r') as f:
-                self.urls = [url.replace('\n', '') for url in f.readlines()]
-        except FileNotFoundError:
-            self.urls = []
-        else:
-            self.urls = [url.replace('yad2.co.il/', 'yad2.co.il/api/pre-load/getFeedIndex/') for url in self.urls]
-
-    def _read_tagged_urls(self):
-        try:
-            with open(URLS_FILE, 'r', encoding='utf-8-sig') as f:
-                tagged_urls = [line.split(', ') for line in f.read().split('\n') if line]
-                self.urls = [(urlmod.url_to_api_link(url), tag) for (url, tag) in tagged_urls]
-                self.tags = [tag for (_, tag) in self.urls]
-        except FileNotFoundError:
-            self.urls = []
+        posts_for_advertising = pd.concat([new_posts, decreased_price_df])
+        posts_for_advertising = posts_for_advertising.sort_values(by='price')
+        self.advertised_tagged_posts = []
+        if not posts_for_advertising.empty:
+            self.advertised_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
 
     def _start_posts_parsing(self):
         print('Parsing yad2 started!')
@@ -154,7 +139,7 @@ class Yad2SearchNewPosts(Yad2Search):
             for index, row in decreased_price_df.iterrows():
                 self.stored_posts.loc[index, 'changed_price_txt'] = '{} (было {})'.format(row['price_df1'], row['price_df2'])
                 self.stored_posts.loc[index, 'price'] = row['price_df1']
-                row['price_df1'] = '{} (было {})'.format(row['price_df1'], row['price_df2'])
+                row['changed_price_txt_df1'] = '{} (было {})'.format(row['price_df1'], row['price_df2'])
         columns_df1 = [col for col in decreased_price_df.columns if '_df1' in col]
         decreased_normal_df = decreased_price_df[columns_df1]
         return decreased_normal_df
@@ -166,3 +151,21 @@ class Yad2SearchNewPosts(Yad2Search):
 
     def _split_newposts_by_tag(self):
         self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
+
+    def _read_urls(self):
+        try:
+            with open(URLS_FILE, 'r') as f:
+                self.urls = [url.replace('\n', '') for url in f.readlines()]
+        except FileNotFoundError:
+            self.urls = []
+        else:
+            self.urls = [url.replace('yad2.co.il/', 'yad2.co.il/api/pre-load/getFeedIndex/') for url in self.urls]
+
+    def _read_tagged_urls(self):
+        try:
+            with open(URLS_FILE, 'r', encoding='utf-8-sig') as f:
+                tagged_urls = [line.split(', ') for line in f.read().split('\n') if line]
+                self.urls = [(urlmod.url_to_api_link(url), tag) for (url, tag) in tagged_urls]
+                self.tags = [tag for (_, tag) in self.urls]
+        except FileNotFoundError:
+            self.urls = []
