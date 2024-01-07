@@ -144,9 +144,10 @@ class Yad2SearchNewPosts(Yad2Search):
                 print(cntr, index)
                 self.stored_posts.loc[index, 'changed_price_txt'] = '{} (было {})'.format(row['price_df1'], row['price_df2'])
                 self.stored_posts.loc[index, 'price'] = row['price_df1']
-                row['changed_price_txt_df1'] = '{} (было {})'.format(row['price_df1'], row['price_df2'])
+                row['changed_price_txt_df1'] = row['price_df2']
         columns_df1 = [col for col in decreased_price_df.columns if '_df1' in col]
         decreased_normal_df = decreased_price_df[columns_df1]
+        print(decreased_normal_df)
         decreased_normal_df.columns = [col.replace('df1', '') for col in decreased_normal_df.columns]
         print(decreased_normal_df[['id', 'price', 'date_added']])
         # decreased_normal_df[DATE_COL] = pd.to_datetime(decreased_normal_df[DATE_COL])
