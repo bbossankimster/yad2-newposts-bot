@@ -85,17 +85,22 @@ class Yad2SearchNewPosts(Yad2Search):
         self.new_posts_count = 0
 
     def start(self):
+        posts_df = self._start_posts_parsing()
+        # self._get_new_posts(posts_df)
+        # self._get_changed_price_only(posts_df)
+        if self.new_posts_count:
+            self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
+
+    def _start_posts_parsing(self):
         print('Parsing yad2 started!')
         posts_raw = list(self._iter_filtered_posts())
         posts_df = pd.DataFrame(posts_raw, columns=POST_DF_COLUMNS)
         posts_df['hash'] = posts_df.apply(lambda x: hashlib.md5((x['tag'] + x['city'] + x['title_1'] + x['contact_name']).encode()).hexdigest(), axis=1)
         posts_df['price'] = posts_df['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(int)
         posts_df = posts_df.set_index('hash')
-        print('Parsed yad2. Found {} posts!'.format(len(posts_df.index)))
-        # self._get_new_posts(posts_df)
-        # self._get_changed_price_only(posts_df)
-        if self.new_posts_count:
-            self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
+        print(posts_df.columns)
+        print('Parsing yad2 finished! Found {} posts!'.format(len(posts_df.index)))
+        return posts_df
 
     def _read_urls(self):
         try:
@@ -140,7 +145,8 @@ class Yad2SearchNewPosts(Yad2Search):
 
     def _get_new_posts(self, posts_df):
         DATE_COL = 'date_added'
-        posts = self.get_last_n_day_posts(posts_df, self.days, DATE_COL)
+        posts = posts_df
+        # posts = self.get_last_n_day_posts(posts_df, self.days, DATE_COL)
         print('Detected {} for last {} days'.format(len(posts.index), self.days))
         print('Stored posts count:', len(self.stored_posts))
         self.stored_posts[DATE_COL] = pd.to_datetime(self.stored_posts[DATE_COL])
@@ -154,14 +160,11 @@ class Yad2SearchNewPosts(Yad2Search):
             print('New posts not found!')
         self.stored_posts = pd.concat([self.stored_posts, self.new_posts])
         self.stored_posts = self.stored_posts.sort_values(by=DATE_COL)
-        if self.save_result:
-            self.stored_posts.to_csv(STORED_POSTS_CSV, index=False)
-            self.new_posts.to_csv(NEW_POSTS_CSV, index=False)
-        if self.new_posts_count:
-            # self.new_posts['price_numeric'] = self.new_posts['price'].str.replace('[^\d.]', '', regex=True).replace('', '0').astype(float)
-            self.new_posts = self.new_posts.sort_values(by='price', ascending=False)
-            print('\nBEFORE filtering:', posts, sep='\n\n')
-            print('\nNEW posts:', self.new_posts, sep='\n\n')
+
+    def _save_posts(self):
+        self.stored_posts.to_csv(STORED_POSTS_CSV, index=False)
+        self.new_posts = self.new_posts.sort_values(by='price', ascending=False)
+        self.new_posts.to_csv(NEW_POSTS_CSV, index=False)
 
     def _split_newposts_by_tag(self):
         self.new_tagged_posts = [(tag, grouped_df) for tag, grouped_df in self.new_posts.groupby('tag')]
