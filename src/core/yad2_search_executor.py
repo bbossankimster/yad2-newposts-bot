@@ -141,10 +141,11 @@ class Yad2SearchNewPosts(Yad2Search):
             for index, row in decreased_price_df.iterrows():
                 self.stored_posts.loc[index, 'changed_price_txt'] = '{} (было {})'.format(row['price_df1'], row['price_df2'])
                 self.stored_posts.loc[index, 'price'] = row['price_df1']
-                row['changed_price_txt_df1'] = row['price_df2']
+                row['changed_price_txt_df1'] = str(row['price_df2'])
         columns_df1 = [col for col in decreased_price_df.columns if '_df1' in col]
         decreased_normal_df = decreased_price_df[columns_df1]
         decreased_normal_df.columns = [col.replace('_df1', '') for col in decreased_normal_df.columns]
+        print(decreased_normal_df['changed_price_txt_df1'])
         return decreased_normal_df
 
     def _save_posts(self):
