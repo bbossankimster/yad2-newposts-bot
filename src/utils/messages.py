@@ -1,3 +1,4 @@
+import emoji
 YAD2_POST_URL = 'https://www.yad2.co.il/item/{}'
 
 
@@ -13,7 +14,8 @@ def make_chunked_msgs(posts):
         for indx, post in grouped_post.iterrows():
             cntr += 1
             if post['changed_price_txt']:
-                price = '{} (было {})'.format(post['price'], post['changed_price_txt'])
+                price = '{} {} (было {})'.format(
+                    post['price'], emoji.emojize(':green_circle:'), post['changed_price_txt'])
             else:
                 price = post['price']
             txt = "{0} {1}\n{2} {3} {4} ({5})".format(
